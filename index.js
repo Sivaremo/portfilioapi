@@ -1,14 +1,15 @@
 'use strict';
 
-const { IncomingMessage, ServerResponse } = require("http");
-const { Resume, Education, Experience, Portfolio } = require("./database"); // using mongoose
+const { Resume, Education, Experience, Portfolio } = require("./database"); // Mongoose models
+const { URL } = require("url");
 
 /**
- * @param {IncomingMessage} req 
- * @param {ServerResponse} res 
+ * @param {import("http").IncomingMessage} req 
+ * @param {import("http").ServerResponse} res 
  */
 module.exports = async (req, res) => {
-    const url = req.url;
+    const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+    const pathname = parsedUrl.pathname;
     const method = req.method;
 
     const routeMap = {
@@ -18,13 +19,13 @@ module.exports = async (req, res) => {
         "/portfolio": { model: Portfolio, fields: ["title", "description", "image", "link"] }
     };
 
-    if (!routeMap[url]) {
+    if (!routeMap[pathname]) {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: "Invalid path" }));
         return;
     }
 
-    const { model, fields } = routeMap[url];
+    const { model, fields } = routeMap[pathname];
 
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -32,10 +33,13 @@ module.exports = async (req, res) => {
     req.on('end', async () => {
         let data = {};
         try {
-            if (body) data = JSON.parse(body);
-        } catch {
+            if (body.trim() !== '') {
+                console.log("🔍 Raw body received:", body); // debug log
+                data = JSON.parse(body);
+            }
+        } catch (err) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Invalid JSON' }));
+            res.end(JSON.stringify({ error: 'Invalid JSON', debug: err.message }));
             return;
         }
 
@@ -56,24 +60,24 @@ module.exports = async (req, res) => {
 
                 case "PUT":
                     if (!data.id) throw new Error("ID required for update");
-                    const update = await model.findById(data.id);
-                    if (!update) throw new Error("Record not found");
-                    Object.assign(update, pickFields(data, fields));
-                    await update.save();
+                    const existing = await model.findById(data.id);
+                    if (!existing) throw new Error("Record not found");
+                    Object.assign(existing, pickFields(data, fields));
+                    await existing.save();
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ message: `${model.modelName} updated` }));
                     break;
 
                 case "DELETE":
                     if (!data.id) throw new Error("ID required for delete");
-                    const del = await model.findByIdAndDelete(data.id);
-                    if (!del) throw new Error("Record not found");
+                    const deleted = await model.findByIdAndDelete(data.id);
+                    if (!deleted) throw new Error("Record not found");
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ message: `${model.modelName} deleted` }));
                     break;
 
                 default:
-                    res.writeHead(405);
+                    res.writeHead(405, { 'Content-Type': 'text/plain' });
                     res.end("Method Not Allowed");
             }
         } catch (err) {
@@ -85,6 +89,8 @@ module.exports = async (req, res) => {
 
 function pickFields(data, fields) {
     const result = {};
-    fields.forEach(f => { if (data[f] !== undefined) result[f] = data[f]; });
+    fields.forEach(f => {
+        if (data[f] !== undefined) result[f] = data[f];
+    });
     return result;
 }

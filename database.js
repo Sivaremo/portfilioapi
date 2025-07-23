@@ -1,50 +1,45 @@
-// const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
-// Use a proper MongoDB connection string
+// Connect to MongoDB (MongoDB Atlas in this case)
 mongoose.connect('mongodb+srv://sivarajt2001:Gjl8iSwPoPj26ns2@portfiolo.gnwjgj6.mongodb.net/portfolioDB?retryWrites=true&w=majority', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
-  console.log("✅ Connected to MongoDB Atlas");
-}).catch((err) => {
-  console.error("❌ MongoDB connection error:", err);
-});
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.error('MongoDB connection error:', err));
 
-// Define schemas
-const resumeSchema = new mongoose.Schema({
-  summary: String,
-  phone: String,
-  email: String,
-  location: String,
-}, { timestamps: true });
+// Resume model
+const Resume = mongoose.model("Resume", new mongoose.Schema({
+    summary: String,
+    phone: String,
+    email: String,
+    location: String
+}));
 
-const educationSchema = new mongoose.Schema({
-  degree: String,
-  start_year: String,
-  end_year: String,
-  college: String,
-  description: String,
-}, { timestamps: true });
+// Education model
+const Education = mongoose.model("Education", new mongoose.Schema({
+    degree: String,
+    start_year: String,
+    end_year: String,
+    college: String,
+    description: String
+}));
 
-const experienceSchema = new mongoose.Schema({
-  title: String,
-  start_date: String,
-  end_date: String,
-  company: String,
-  responsibilities: String,
-}, { timestamps: true });
+// Experience model
+const Experience = mongoose.model("Experience", new mongoose.Schema({
+    title: String,
+    start_date: String,
+    end_date: String,
+    company: String,
+    responsibilities: String
+}));
 
-const portfolioSchema = new mongoose.Schema({
-  title: String,
-  description: String,
-  image: String,
-  link: String,
-}, { timestamps: true });
-
-// Define models
-const Resume = mongoose.model('Resume', resumeSchema);
-const Education = mongoose.model('Education', educationSchema);
-const Experience = mongoose.model('Experience', experienceSchema);
-const Portfolio = mongoose.model('Portfolio', portfolioSchema);
+// Portfolio model
+const Portfolio = mongoose.model("Portfolio", new mongoose.Schema({
+    title: String,
+    description: String,
+    image: String,
+    link: String
+}));
 
 module.exports = { Resume, Education, Experience, Portfolio };
